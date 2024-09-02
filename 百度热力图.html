@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>POI热力图示例</title>
+    <style type="text/css">
+        #map {
+            width: 100%;
+            height: 600px;
+        }
+        #control-panel {
+            padding: 10px;
+            background-color: #fff;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 999;
+        }
+    </style>
+    <script src="https://api.map.baidu.com/api?v=3.0&ak=6dSqSsEJSnfsBfrO2jkl7nSHd0EdD7Fa"></script>
+</head>
+<body>
+    <div id="control-panel">
+        <input type="text" id="search-box" placeholder="输入搜索关键词">
+        <button onclick="searchPOI()">搜索</button>
+        <button onclick="toggleHeatmap()">切换热力图</button>
+    </div>
+    <div id="map"></div>
+
+    <script>
+        var map = new BMap.Map("map"); // 创建地图实例
+        map.centerAndZoom(new BMap.Point(116.404, 39.915), 11); // 初始化地图，设置中心点坐标和地图级别
+        map.enableScrollWheelZoom(true); // 开启鼠标滚轮缩放
+
+        var heatmapOverlay;
+        var markers = [];
+
+        // 搜索POI
+        function searchPOI() {
+            var keyword = document.getElementById('search-box').value;
+            var local = new BMap.LocalSearch(map, {
+                onSearchComplete: function(results) {
+                    clearMap(); // 清除之前的POI点
+                    if (results.getCurrentNumPois() > 0) {
+                        var points = [];
+                        for (var i = 0; i < results.getCurrentNumPois(); i++) {
+                            var poi = results.getPoi(i);
+                            points.push({ "lng": poi.point.lng, "lat": poi.point.lat, "count": 1 });
+                            addMarker(poi.point);
+                        }
+                        showHeatmap(points);
+                    }
+                }
+            });
+            local.search(keyword);
+        }
+
+        // 添加POI标记
+        function addMarker(point) {
+            var marker = new BMap.Marker(point);
+            map.addOverlay(marker);
+            markers.push(marker);
+        }
+
+        // 清除地图上的标记和热力图
+        function clearMap() {
+            for (var i = 0; i < markers.length; i++) {
+                map.removeOverlay(markers[i]);
+            }
+            markers = [];
+            if (heatmapOverlay) {
+                map.removeOverlay(heatmapOverlay);
+                heatmapOverlay = null;
+            }
+        }
+
+        // 显示热力图
+        function showHeatmap(points) {
+            if (!isSupportHeatmap()) {
+                alert("当前浏览器不支持热力图功能");
+                return;
+            }
+            heatmapOverlay = new BMapLib.HeatmapOverlay({ "radius": 20 });
+            map.addOverlay(heatmapOverlay);
+            heatmapOverlay.setDataSet({ data: points, max: 10 });
+        }
+
+        // 切换热力图显示状态
+        function toggleHeatmap() {
+            if (heatmapOverlay) {
+                if (heatmapOverlay.isVisible()) {
+                    heatmapOverlay.hide();
+                } else {
+                    heatmapOverlay.show();
+                }
+            }
+        }
+
+        // 判断浏览器是否支持热力图
+        function isSupportHeatmap() {
+            var userAgent = window.navigator.userAgent;
+            if (userAgent.indexOf('MSIE') >= 0 && userAgent.indexOf('Opera') < 0) {
+                return false;
+            }
+            return true;
+        }
+    </script>
+    <script src="https://api.map.baidu.com/library/Heatmap/2.0/src/Heatmap_min.js"></script>
+</body>
+</html>
